@@ -23,6 +23,7 @@ modules:
           srv-url: ${default-url}
     requires:
       - name: capapptests-db
+      - name: capapptests-auth
 
   - name: capapptests-db-deployer
     type: hdb
@@ -32,9 +33,34 @@ modules:
     requires:
       - name: capapptests-db
 
+  - name: capapptests
+    type: approuter.nodejs
+    path: app/ # from cds.env.folders. Consider also cds.env.build.target -> gen/app
+    parameters:
+      keep-existing-routes: true
+      disk-quota: 256M
+      memory: 256M
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api # must be used in xs-app.json as well
+          url: ~{srv-url}
+          forwardAuthToken: true
+      - name: capapptests-auth
+
 resources:
   - name: capapptests-db
     type: com.sap.xs.hdi-container
     parameters:
       service: hana
       service-plan: hdi-shared
+  - name: capapptests-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: capapptests-${org}-${space}
+        tenant-mode: dedicated
